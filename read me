@@ -1,0 +1,23 @@
+this is needed to implemented on lecturevector table : 
+
+--step 1
+CREATE INDEX idx_lectures_fts ON public."IndexedVectorLectures"
+USING GIN ((setweight(to_tsvector('english', "Title"), 'A') || setweight(to_tsvector('english', "Description"), 'B')));
+--step 2
+ALTER TABLE public."IndexedVectorLectures" ADD COLUMN fts_vector tsvector;
+UPDATE public."IndexedVectorLectures" 
+SET fts_vector = setweight(to_tsvector('english', "Title"), 'A') || setweight(to_tsvector('english', "Description"), 'B');
+--step 3
+CREATE INDEX idx_lectures_fts ON public."IndexedVectorLectures" USING GIN (fts_vector);
+--step 4
+SELECT 
+    "Id", 
+    "Title", 
+    "Description", 
+    ts_rank(fts_vector, to_tsquery('english', 'country')) AS "Rank"
+FROM 
+    public."IndexedVectorLectures"
+WHERE 
+    fts_vector @@ to_tsquery('english', 'country')
+ORDER BY 
+    "Rank" DESC;
