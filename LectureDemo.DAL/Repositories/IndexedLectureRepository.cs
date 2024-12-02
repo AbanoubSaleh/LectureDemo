@@ -1,6 +1,7 @@
 using LectureDemo.DAL.Data;
 using LectureDemo.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
 using System.Text.RegularExpressions;
 
 namespace LectureDemo.DAL.Repositories
@@ -41,6 +42,21 @@ namespace LectureDemo.DAL.Repositories
             {
                 return Enumerable.Empty<IndexedLecture>(); // Return an empty list if searchTerm is invalid
             }
+            var tsQuery = string.Join(" & ", Regex.Split(searchTerm.Trim(), @"\s+").Where(word => !string.IsNullOrEmpty(word)));
+
+            return await _postgresContext.IndexedLectures
+                .Where(il => EF.Functions
+                    .ToTsVector("english", il.Title + " " + il.Description)
+                    .Matches(EF.Functions.ToTsQuery("english", tsQuery)))
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<IndexedLecture>> SearchByFullTextExactMatchAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                return Enumerable.Empty<IndexedLecture>(); // Return an empty list if searchTerm is invalid
+            }
 
             return await _postgresContext.IndexedLectures
                 .Where(il => EF.Functions
@@ -74,6 +90,39 @@ namespace LectureDemo.DAL.Repositories
                         ) // Calculate rank
                 })
                 .OrderByDescending(x => x.Rank) // Order results by rank
+                .ToListAsync();
+
+        }
+
+        public async Task<IEnumerable<object>> SearchByFullTextWithRankingAndWeightAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                return Enumerable.Empty<IndexedVectorLecture>(); // Return an empty list if searchTerm is invalid
+            }
+
+            var tsQuery = string.Join(" & ", Regex.Split(searchTerm.Trim(), @"\s+").Where(word => !string.IsNullOrEmpty(word)));
+
+            return await _postgresContext.IndexedVectorLectures
+                .Where(il => EF.Functions
+                    .ToTsVector("english", il.Title)
+                    .SetWeight(NpgsqlTsVector.Lexeme.Weight.A)
+                    .Concat(EF.Functions.ToTsVector("english", il.Description)
+                        .SetWeight(NpgsqlTsVector.Lexeme.Weight.B))
+                    .Matches(EF.Functions.ToTsQuery("english", tsQuery)))
+                .Select(il => new
+                {
+                    il.Id,
+                    il.Title,
+                    il.Description,
+                    Rank = EF.Functions
+                        .ToTsVector("english", il.Title)
+                        .SetWeight(NpgsqlTsVector.Lexeme.Weight.A)
+                        .Concat(EF.Functions.ToTsVector("english", il.Description)
+                            .SetWeight(NpgsqlTsVector.Lexeme.Weight.B))
+                        .Rank(EF.Functions.ToTsQuery("english", tsQuery))
+                })
+                .OrderByDescending(x => x.Rank)
                 .ToListAsync();
 
         }

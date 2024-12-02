@@ -10,6 +10,8 @@ namespace LectureDemo.DAL.Repositories
         Task<bool> UpdateAsync(IndexedLecture indexedLecture);
         Task<bool> DeleteAsync(int id);
         Task<IEnumerable<IndexedLecture>> SearchByFullTextAsync(string searchTerm);
+        Task<IEnumerable<IndexedLecture>> SearchByFullTextExactMatchAsync(string searchTerm);
         Task<IEnumerable<object>> SearchByFullTextWithRankingAsync(string searchTerm);
+        Task<IEnumerable<object>> SearchByFullTextWithRankingAndWeightAsync(string searchTerm);
     }
 }

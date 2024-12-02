@@ -61,6 +61,20 @@ public class LecturesController : ControllerBase
         return Ok(results);
     }
 
+
+    /// <summary>
+    /// Searches for lectures using full-text search in PostgreSQL.
+    /// </summary>
+    /// <param name="term">The search term to filter lectures.</param>
+    /// <returns>A list of lectures that match the search term.</returns>
+    [HttpGet("search/fulltextExactmatch")]
+    public async Task<ActionResult<IEnumerable<Lecture>>> SearchByFullTextExactmatch([FromQuery] string term)
+    {
+
+        var results = await _indexedLectureRepository.SearchByFullTextExactMatchAsync(term);
+        return Ok(results);
+    }
+
     /// <summary>
     /// Searches for lectures using full-text search in PostgreSQL.
     /// </summary>
@@ -71,6 +85,18 @@ public class LecturesController : ControllerBase
     {
 
         var results = await _indexedLectureRepository.SearchByFullTextWithRankingAsync(term);
+        return Ok(results);
+    }
+    /// <summary>
+    /// Searches for lectures using full-text search in PostgreSQL.
+    /// </summary>
+    /// <param name="term">The search term to filter lectures.</param>
+    /// <returns>A list of lectures that match the search term.</returns>
+    [HttpGet("search/FullTextWithRankingAndWeight")]
+    public async Task<ActionResult<IEnumerable<Lecture>>> FullTextWithRankingAndWeight([FromQuery] string term)
+    {
+
+        var results = await _indexedLectureRepository.SearchByFullTextWithRankingAndWeightAsync(term);
         return Ok(results);
     }
 
